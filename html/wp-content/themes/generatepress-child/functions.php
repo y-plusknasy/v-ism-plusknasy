@@ -5,6 +5,21 @@
  * Add your custom functions here.
  */
 
+/**
+ * Security: Disable XML-RPC
+ * DDoS攻撃やブルートフォース攻撃の標的になりやすいため無効化します。
+ * Jetpackなどの一部プラグインやスマホアプリが動かなくなる可能性がありますが、
+ * 通常のWeb運用やFirebaseとのAPI連携(REST API)には影響しません。
+ */
+add_filter( 'xmlrpc_enabled', '__return_false' );
+
+/**
+ * Security: Hide WordPress Version
+ * ソースコード上のWPバージョン情報を削除し、攻撃者にバージョンを特定させにくくします。
+ */
+remove_action('wp_head', 'wp_generator');
+
+
 function generatepress_child_enqueue_scripts() {
     if ( is_rtl() ) {
         wp_enqueue_style( 'generatepress-rtl', trailingslashit( get_template_directory_uri() ) . 'rtl.css' );

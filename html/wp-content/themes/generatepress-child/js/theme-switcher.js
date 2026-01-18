@@ -27,6 +27,22 @@ jQuery(document).ready(function($) {
     // 初期適用
     applyTheme();
 
+    // 2. メニューの特定の項目をボタンに置換
+    // 「サンプルページ」または「Sample Page」を探す
+    const $targetLink = $('.main-navigation a').filter(function() {
+        const text = $(this).text().trim();
+        return text === 'サンプルページ' || text === 'Sample Page';
+    });
+
+    if ($targetLink.length) {
+        const $li = $targetLink.parent('li');
+        // 親のliの中身をボタンに入れ替え
+        $li.html('<button class="theme-toggle-btn" style="background:none;border:none;cursor:pointer;padding:0 20px;height:60px;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;"></button>');
+        
+        // 再度適用（ボタンのアイコン更新のため）
+        applyTheme();
+    }
+
     // 3. クリックイベント
     $(document).on('click', '.theme-toggle-btn', function(e) {
         e.preventDefault();

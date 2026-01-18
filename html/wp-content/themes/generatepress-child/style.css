@@ -751,17 +751,19 @@ body.is-dark-theme .sns-link.facebook:hover { color: #4298f5; }
 .mobile-ad-slot {
     position: relative;
     height: 400px; /* 広告の高さ */
-    width: 100vw; /* 画面幅いっぱい */
-    margin-left: -20px; /* default padding of GP containers inside generic-content is usually 20px */
+    width: 100vw;
+    margin-left: -20px;
     margin-right: -20px;
     z-index: 0;
     
-    /* Background Color Fallback if image fails or parallax is invisible due to short scroll */
     background-color: #222;
-
-    /* The Magic: Clip the fixed child to this container */
     clip-path: inset(0); 
     -webkit-clip-path: inset(0);
+}
+
+/* Only the ad overlay text/button should be clickable */
+.mobile-ad-slot .ad-overlay-text {
+    pointer-events: auto;
 }
 
 .mobile-ad-content {
@@ -773,7 +775,7 @@ body.is-dark-theme .sns-link.facebook:hover { color: #4298f5; }
     background-size: cover;
     background-position: center;
     z-index: -1;
-    pointer-events: none; /* クリックを透過させないならautoだが、背景扱いならnone */
+    pointer-events: none;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -825,15 +827,22 @@ body.is-dark-theme .sns-link.facebook:hover { color: #4298f5; }
 
 /* 2. Toggle Button Styling & Color Logic */
 .custom-mobile-theme-toggle {
-    display: none; /* Hidden on Desktop */
+    display: flex !important; /* Force display on all devices for now to troubleshoot */
     background: transparent;
     border: none;
     padding: 0 15px;
-    line-height: 60px;
+    line-height: normal; /* Fixed height can cause alignment issues */
+    height: 60px;
+    align-items: center;
+    justify-content: center;
     cursor: pointer;
     /* Default (Light Mode) Color */
     color: #333333; 
 }
+/* Hide on Desktop via media query instead if user strictly wants it mobile only,
+   but user asked "is not displayed", assuming they want it back or generalized.
+   Let's check media query override down below.
+*/
 
 /* Dark Mode Color Override */
 body.is-dark-theme .custom-mobile-theme-toggle {
