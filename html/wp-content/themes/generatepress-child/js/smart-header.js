@@ -4,7 +4,7 @@ jQuery(document).ready(function($) {
     var lastScrollTop = 0;
     var delta = 5;
     var headerHeight = $header.outerHeight();
-    var sidebarBaseTop = 20; // サイドバーの基本の余白
+    var sidebarBaseTop = 30; // サイドバーの基本のtop位置 (ヘッダーとの隙間)
 
     // ヘッダーをfixedにするため、bodyの上部に余白を追加してコンテンツが隠れないようにする
     $('body').css('padding-top', headerHeight + 'px');

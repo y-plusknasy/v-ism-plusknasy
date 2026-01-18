@@ -27,29 +27,6 @@ jQuery(document).ready(function($) {
     // 初期適用
     applyTheme();
 
-    // 2. メニューの特定の項目をボタンに置換
-    // 「サンプルページ」または「Sample Page」を探す
-    // GeneratePressのメニュー構造依存: .main-navigation ul li a
-    const $targetLink = $('.main-navigation a').filter(function() {
-        const text = $(this).text().trim();
-        return text === 'サンプルページ' || text === 'Sample Page';
-    });
-
-    if ($targetLink.length) {
-        const $li = $targetLink.parent('li');
-        // 親のliの中身をボタンに入れ替え
-        // ボタンのデザインはCSSで調整可能だが、ここではインラインで簡易設定
-        // SVG配置のため flex を使用
-        $li.html('<button class="theme-toggle-btn" style="background:none;border:none;cursor:pointer;padding:0 20px;height:60px;color:inherit;display:flex;align-items:center;justify-content:center;width:100%;"></button>');
-        
-        // 再度適用（ボタンのアイコン更新のため）
-        applyTheme();
-    } else {
-        // メニューに見つからなかった場合、ヘッダーの末尾などに強制追加することも可能だが、
-        // 今回の要件は「サンプルページがあるところ」なのでスキップ
-        console.log("Theme switcher: Target menu item not found.");
-    }
-
     // 3. クリックイベント
     $(document).on('click', '.theme-toggle-btn', function(e) {
         e.preventDefault();

@@ -9,6 +9,19 @@
 */
 
 /* 追加のカスタマイズCSSはここに記述 */
+
+/* 横スクロール防止 (全ページ共通推奨) */
+html, body {
+    max-width: 100vw;
+    /* overflow-x: hidden; は position: sticky を無効化してしまうため、clipを使用するか、削除する */
+    overflow-x: clip; 
+}
+
+/* 子要素がはみ出さないように対策 */
+img, iframe, video, object {
+    max-width: 100%;
+}
+
 /* PCレイアウト用の調整 */
 @media (min-width: 769px) {
     /* サイト全体を管理するコンテナ */
@@ -36,6 +49,8 @@
         height: fit-content;
         width: 300px;
         transition: top 0.3s ease-in-out; /* ヘッダーの動きに合わせて滑らかに動かす */
+        padding-top: 0px; 
+        margin-top: 20px; /* 初期配置でもヘッダーとの隙間を確保する */
     }
 
     /* プレイヤー等の仮スタイル */
@@ -88,6 +103,9 @@
 /* 再生ボタンのスタイル */
 .podcast-play-button-wrapper {
     margin: 15px 0;
+    display: flex;
+    flex-wrap: wrap; /* 画面幅が狭い場合は折り返し */
+    gap: 10px; /* ボタン間の余白 */
 }
 
 .podcast-play-button {
@@ -95,9 +113,9 @@
     color: #fff;
     border: none;
     border-radius: 20px;
-    padding: 0 20px; /* 横パディングのみ指定、高さはheightで固定 */
+    padding: 0 10px; /* パディング縮小、コンテンツ主体で制御 */
     height: 40px; /* 高さを固定 */
-    min-width: 160px; /* 幅を固定（文字数変動対策） */
+    width: 200px; /* 幅を固定（文字数変動対策） */
     font-size: 14px;
     font-weight: bold;
     cursor: pointer;
@@ -107,6 +125,30 @@
     justify-content: center; /* 中央揃え */
     gap: 8px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1); /* ボタンにも少しシャドウ */
+}
+
+.podcast-play-button.disabled,
+.podcast-play-button:disabled {
+    background-color: #e0e0e0;
+    color: #999;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+.podcast-play-button.disabled:hover,
+.podcast-play-button:disabled:hover {
+    background-color: #e0e0e0; /* ホバー時も色を変えない */
+}
+
+body.is-dark-theme .podcast-play-button.disabled,
+body.is-dark-theme .podcast-play-button:disabled {
+    background-color: #444;
+    color: #aaa;
+}
+
+body.is-dark-theme .podcast-play-button.disabled:hover,
+body.is-dark-theme .podcast-play-button:disabled:hover {
+    background-color: #444; /* ダークテーマホバー時も色を変えない */
 }
 
 .podcast-play-button .text-container {
@@ -142,12 +184,12 @@
 .wave-bar {
     display: inline-block;
     width: 3px;
-    background-color: #1da1f2; /* 通常時は青 */
+    background-color: #fff; /* デフォルトで白（背景が青のため） */
     animation: wave 1s infinite ease-in-out;
 }
 
 .podcast-play-button.playing .wave-bar {
-    background-color: #1da1f2; /* 反転時は青文字なので青バー */
+    background-color: #fff; /* 再生中も白 */
 }
 
 @keyframes wave {
@@ -359,29 +401,45 @@
     transition: color 0.2s;
 }
 
-.volume-icon:hover {
-    color: #333;
-}
-
 .volume-icon svg {
-    /* SVGサイズ縮小 */
-    width: 16px; 
-    height: 16px;
+    /* SVGサイズ */
+    width: 20px; 
+    height: 20px;
     fill: currentColor;
-    overflow: visible; /* 見切れ対策 */
+    /* overflow: visible はブラウザによって挙動が違うことがあるので、
+       アイコン自体の大きさやパディングで調整する */
 }
 
-.volume-icon.muted {
-    color: #aaa;
-    text-decoration: line-through; /* SVGがない場合のフォールバック */
+.volume-icon.muted .icon-on {
+    display: none !important;
+}
+
+.volume-icon.muted .icon-off {
+    display: block !important; /* SVG自体を表示 */
 }
 
 #player-volume-bar {
     width: 60px;
-    accent-color: #aaa;
+    accent-color: #1da1f2; /* シークバーと同じ色に */
 }
 
 /* モバイル調整はここでは不要（hide-on-mobileクラスで隠すため） */
+
+/* ============================
+   Sticky Footer Settings
+   ============================ */
+body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* #page wrapper needs to grow to push footer down */
+#page {
+    flex: 1;
+    width: 100%;
+}
+
 
 /* =================================================================
    ダークテーマ設定 (JSクラス制御: body.is-dark-theme)
@@ -406,7 +464,8 @@ body.is-dark-theme .player-progress-container {
 }
 
 /* シークバーのアクセントカラー (オレンジ) */
-body.is-dark-theme #player-seek-bar {
+body.is-dark-theme #player-seek-bar,
+body.is-dark-theme #player-volume-bar {
     accent-color: #ff6600;
     background-color: #444;
 }
@@ -576,3 +635,289 @@ body.is-dark-theme h5,
 body.is-dark-theme h6 {
    color: #fff;
 }
+
+/* ============================
+   ソーシャルアクション (いいね & SNS)
+   ============================ */
+.social-footer {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid #eee;
+}
+
+.social-actions-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Like Button - Removed based on request to prioritize podcast links */
+
+/* Listen on links */
+.listen-on-links {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.listen-on-links .label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #999;
+}
+
+.platform-link {
+    color: #666;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.platform-link:hover {
+    transform: translateY(-2px);
+}
+
+.platform-link.apple:hover { color: #872ec4; /* Apple Podcast Purple */ }
+.platform-link.spotify:hover { color: #1DB954; }
+
+/* Dark Theme */
+body.is-dark-theme .listen-on-links .label {
+    color: #777;
+}
+
+body.is-dark-theme .platform-link {
+    color: #aaa;
+}
+
+body.is-dark-theme .platform-link:hover {
+    color: #fff; /* Dark theme hover to white for better contrast or brand color */
+}
+
+/* Specific brand color on hover in dark mode too if preferred */
+body.is-dark-theme .platform-link.apple:hover { color: #d56dfb; }
+body.is-dark-theme .platform-link.spotify:hover { color: #1DB954; }
+
+/* SNS Links */
+.sns-share-links {
+    display: flex;
+    gap: 15px;
+}
+
+.sns-link {
+    color: #999;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sns-link:hover {
+    color: #555;
+    transform: translateY(-2px); /* Slight lift */
+}
+
+.sns-link.twitter:hover { color: #000; } /* X is black */
+.sns-link.facebook:hover { color: #1877f2; }
+
+/* Dark Theme Adjustments for SNS */
+body.is-dark-theme .social-footer {
+    border-top-color: #333;
+}
+
+body.is-dark-theme .sns-link {
+    color: #777;
+}
+
+body.is-dark-theme .sns-link:hover {
+    color: #fff;
+}
+
+body.is-dark-theme .sns-link.twitter:hover { color: #fff; } 
+body.is-dark-theme .sns-link.facebook:hover { color: #4298f5; }
+
+/* ============================
+   Mobile Ad Implementation
+   ============================ */
+
+/* Hide Play Button on Mobile */
+@media (max-width: 768px) {
+    .podcast-play-button-wrapper {
+        display: none;
+    }
+}
+
+/* Mobile Ad Slot (Parallax Effect) */
+.mobile-ad-slot {
+    position: relative;
+    height: 400px; /* 広告の高さ */
+    width: 100vw; /* 画面幅いっぱい */
+    margin-left: -20px; /* default padding of GP containers inside generic-content is usually 20px */
+    margin-right: -20px;
+    z-index: 0;
+    
+    /* Background Color Fallback if image fails or parallax is invisible due to short scroll */
+    background-color: #222;
+
+    /* The Magic: Clip the fixed child to this container */
+    clip-path: inset(0); 
+    -webkit-clip-path: inset(0);
+}
+
+.mobile-ad-content {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    z-index: -1;
+    pointer-events: none; /* クリックを透過させないならautoだが、背景扱いならnone */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 広告内のテキストやボタン (中央配置) */
+.ad-overlay-text {
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 14px;
+    pointer-events: auto; /* ボタン等は押せるように */
+}
+
+/* Hide Ad on Desktop */
+@media (min-width: 769px) {
+    .mobile-ad-slot {
+        display: none;
+    }
+}
+
+/* Margin/Padding Adjustments for Mobile */
+@media (max-width: 768px) {
+    /* GPのモバイルコンテナパディング調整補正 */
+    .mobile-ad-slot {
+         /* inside structure depends on GP settings, 
+            assuming #primary or .site-content has padding */
+         margin-left: calc( -1 * var(--content-padding, 20px));
+         width: calc(100% + (var(--content-padding, 20px) * 2));
+    }
+}
+
+/* Mobile Theme Toggle & Header Adjustments */
+
+/* 1. Remove underlines from Site Title and Button */
+.main-title a,
+.navigation-branding a,
+.site-branding a,
+.custom-mobile-theme-toggle {
+    text-decoration: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
+.custom-mobile-theme-toggle:focus {
+    outline: none; 
+}
+
+/* 2. Toggle Button Styling & Color Logic */
+.custom-mobile-theme-toggle {
+    display: none; /* Hidden on Desktop */
+    background: transparent;
+    border: none;
+    padding: 0 15px;
+    line-height: 60px;
+    cursor: pointer;
+    /* Default (Light Mode) Color */
+    color: #333333; 
+}
+
+/* Dark Mode Color Override */
+body.is-dark-theme .custom-mobile-theme-toggle {
+    color: #ffffff;
+}
+
+.custom-mobile-theme-toggle svg {
+    width: 24px;
+    height: 24px;
+    vertical-align: middle;
+}
+
+/* 3. Mobile Layout Corrections (Consistency between Index/Single) */
+@media (max-width: 768px) {
+    /* Explicit Color Logic for Mobile Toggle to fix "stuck in white" issue */
+    html body .custom-mobile-theme-toggle {
+        color: #333333 !important; /* Force Dark Color in Light Mode */
+    }
+    html body.is-dark-theme .custom-mobile-theme-toggle {
+        color: #ffffff !important; /* Force Light Color in Dark Mode */
+    }
+
+    .custom-mobile-theme-toggle {
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        height: 60px;
+        width: auto !important;
+        background: transparent !important;
+        border: none !important;
+        padding: 0 10px !important;
+        margin: 0 !important;
+    }
+
+    /* Fix Layout Stacking: Force Row and No Wrap */
+    .inside-header {
+        display: flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+
+    /* Prevent Branding from forcing newline */
+    .site-branding,
+    .site-logo,
+    .navigation-brand,
+    .site-branding-container {
+        width: auto !important;
+        max-width: 80% !important; /* Safety cap */
+        flex-shrink: 1 !important; 
+        flex-grow: 0 !important;
+        margin-right: auto !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* Ensure Branding Links have no underline */
+    .site-branding a,
+    .main-title a {
+        border-bottom: none !important;
+        box-shadow: none !important;
+        text-decoration: none !important;
+    }
+
+    /* Mobile Toggle Wrapper Position */
+    .mobile-menu-control-wrapper {
+        margin-left: auto !important;
+        display: flex !important;
+        align-items: center !important;
+        order: 99 !important;
+        flex-shrink: 0 !important;
+        width: auto !important;
+        float: none !important; /* Override theme floats */
+        border: none !important;
+        border-bottom: none !important;
+        height: 60px !important;
+    }
+
+    /* Extra safety for button inside wrapper */
+    .mobile-menu-control-wrapper .custom-mobile-theme-toggle,
+    .mobile-menu-control-wrapper button {
+        border-bottom: none !important;
+        box-shadow: none !important;
+        text-decoration: none !important;
+    }
+}
+

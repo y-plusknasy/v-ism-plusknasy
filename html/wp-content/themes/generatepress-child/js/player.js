@@ -64,16 +64,13 @@ jQuery(document).ready(function($) {
             $playBtn.html(svgPlay); 
             $playBtn.css('padding-left', '2px'); // Playアイコンの視覚調整
             if ($currentArticleBtn) {
-                // Now Playingの状態から、Pausedという表記に変更する（またはPlay Episodeに戻すか）
-                // 要望としては「ポーズボタンを押したときと同じ挙動」なので、
-                // ポーズ中は「一時停止アイコン + Paused」のような状態にするのが一般的だが、
-                // ここでは再度押すと再生できることを示すため "Resume" あるいは元の "Play" に戻すのが自然。
-                // いったん元の Play Episode に戻す仕様で実装済みだが、
-                // 「Now Playing」のボタンを押したらポーズ、というロジックは既に実装済み（下記clickイベント内）。
-                
-                // ここでは見た目を「停止状態」に戻す
+                // Now Playingの状態から元に戻す
                 $currentArticleBtn.find('.icon-container').html('▶');
-                $currentArticleBtn.find('.text-container').text('Play Episode');
+                
+                // data-original-textがある場合はそれを使う、なければデフォルト
+                const originalText = $currentArticleBtn.data('original-text') || 'Play Episode';
+                $currentArticleBtn.find('.text-container').text(originalText);
+                
                 $currentArticleBtn.removeClass('playing');
             }
         }
@@ -81,14 +78,14 @@ jQuery(document).ready(function($) {
 
     // --- イベントリスナー ---
 
-    // グローバルなクリックロック（イベント多重発火防止）
-    // --- イベントリスナー ---
-
     // 1. 記事内の再生ボタンクリック
     $(document).off('click', '.podcast-play-button').on('click', '.podcast-play-button', function(e) {
         e.preventDefault();
 
         const $btn = $(this);
+        // disabledなら何もしない
+        if ($btn.hasClass('disabled') || $btn.prop('disabled')) return;
+
         const src = $btn.data('src');
         const title = $btn.data('title');
 
@@ -106,7 +103,8 @@ jQuery(document).ready(function($) {
                 // アイコンリセット
                 if ($currentArticleBtn) {
                     $currentArticleBtn.find('.icon-container').html('▶');
-                    $currentArticleBtn.find('.text-container').text('Play Episode');
+                    const originalText = $currentArticleBtn.data('original-text') || 'Play Episode';
+                    $currentArticleBtn.find('.text-container').text(originalText);
                     $currentArticleBtn.removeClass('playing');
                 }
 
@@ -157,34 +155,38 @@ jQuery(document).ready(function($) {
     const $volumeIcon = $('.volume-icon');
     let lastVolume = 1.0;
     
+    // アイコンの状態管理（クラスの有無のみで管理）
+    function updateVolumeIcon(vol) {
+        if (vol < 0.01) {
+            $volumeIcon.addClass('muted');
+        } else {
+            $volumeIcon.removeClass('muted');
+        }
+    }
+    
     $volumeBar.on('input', function() {
         const val = $(this).val();
         const vol = val / 100;
         audio.volume = vol;
+        updateVolumeIcon(vol);
         
-        // アイコンのミュート状態更新
-        if (vol === 0) {
-            $volumeIcon.addClass('muted');
-        } else {
-            $volumeIcon.removeClass('muted');
-            lastVolume = vol; // ミュート解除時の復帰用に記憶
-        }
+        if (vol > 0) lastVolume = vol; 
     });
 
     // ボリュームアイコンクリックでミュート切り替え
     $volumeIcon.on('click', function() {
-        if (audio.volume > 0) {
-             // ミュートにする
+        if (audio.volume > 0.01) {
+            // ミュート実行
             lastVolume = audio.volume;
             audio.volume = 0;
             $volumeBar.val(0);
-            $volumeIcon.addClass('muted');
+            updateVolumeIcon(0);
         } else {
-            // ミュート解除（元の音量に戻す。もし元が0なら50%にする）
-            const targetVol = (lastVolume > 0) ? lastVolume : 0.5;
+            // ミュート解除 (前回の音量 または 50%)
+            const targetVol = (lastVolume > 0.01) ? lastVolume : 0.5;
             audio.volume = targetVol;
             $volumeBar.val(targetVol * 100);
-            $volumeIcon.removeClass('muted');
+            updateVolumeIcon(targetVol);
         }
     });
 
