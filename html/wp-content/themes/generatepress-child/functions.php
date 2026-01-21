@@ -90,6 +90,33 @@ function generatepress_child_add_fixed_sidebar() {
 add_action( 'generate_after_primary_content_area', 'generatepress_child_add_fixed_sidebar' );
 
 /**
+ * モバイル用スティッキープレイヤーを出力する
+ * (記事詳細ページのみ、フッター前に配置)
+ */
+function generatepress_child_add_mobile_player() {
+    // 記事詳細ページでのみ表示
+    if ( ! is_single() ) {
+        return;
+    }
+    ?>
+    <div class="mobile-sticky-player">
+        <div class="mobile-player-progress-container">
+            <input type="range" id="mobile-player-seek-bar" min="0" max="100" value="0" step="0.1">
+        </div>
+
+        <div class="mobile-player-controls">
+            <button id="mobile-player-btn-rewind" class="mobile-control-btn" aria-label="Rewind 15 seconds">-15s</button>
+            <button id="mobile-player-btn-play" class="mobile-control-btn mobile-play-btn" aria-label="Play/Pause">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <button id="mobile-player-btn-forward" class="mobile-control-btn" aria-label="Forward 30 seconds">+30s</button>
+        </div>
+    </div>
+    <?php
+}
+add_action( 'generate_before_footer', 'generatepress_child_add_mobile_player' );
+
+/**
  * プレイヤー用のスクリプトとスタイルを読み込む
  */
 function generatepress_child_enqueue_player_scripts() {
@@ -161,6 +188,17 @@ function generatepress_child_add_play_button() {
         ?>
     </div>
     <?php
+    
+    // モバイル用広告枠を再生ボタンの直後に挿入（記事詳細ページのみ）
+    if ( is_single() && wp_is_mobile() ) {
+        ?>
+        <div class="mobile-ad-slot single-post-ad" style="margin: 20px -20px;">
+            <div class="mobile-ad-content" style="background-image: url('https://placehold.co/600x400/333333/FFFFFF/png?text=Ad+Space');">
+                <a href="#" class="ad-overlay-text" target="_blank">Sponsored Content</a>
+            </div>
+        </div>
+        <?php
+    }
 }
 add_action( 'generate_after_entry_header', 'generatepress_child_add_play_button' );
 

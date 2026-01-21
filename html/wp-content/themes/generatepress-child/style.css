@@ -740,10 +740,27 @@ body.is-dark-theme .sns-link.facebook:hover { color: #4298f5; }
    Mobile Ad Implementation
    ============================ */
 
-/* Hide Play Button on Mobile */
+/* Hide Play Button on Mobile Index/Archive Pages Only */
 @media (max-width: 768px) {
-    .podcast-play-button-wrapper {
+    /* Hide on index/archive pages */
+    body.archive .podcast-play-button-wrapper,
+    body.home .podcast-play-button-wrapper,
+    body.blog .podcast-play-button-wrapper {
         display: none;
+    }
+    
+    /* Show on single post pages */
+    body.single .podcast-play-button-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin: 20px 0;
+    }
+    
+    /* Full width buttons on mobile single posts */
+    body.single .podcast-play-button {
+        width: 100%;
+        max-width: 100%;
     }
 }
 
@@ -802,10 +819,152 @@ body.is-dark-theme .sns-link.facebook:hover { color: #4298f5; }
 @media (max-width: 768px) {
     /* GPのモバイルコンテナパディング調整補正 */
     .mobile-ad-slot {
-         /* inside structure depends on GP settings, 
-            assuming #primary or .site-content has padding */
          margin-left: calc( -1 * var(--content-padding, 20px));
          width: calc(100% + (var(--content-padding, 20px) * 2));
+    }
+    
+    /* ============================
+       Mobile Sticky Player (Single Post Only)
+       ============================ */
+    body.single .mobile-sticky-player {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 1000;
+        background: #fff;
+        color: #333;
+        padding: 12px 16px 16px;
+        box-shadow: 0 -4px 12px rgba(0,0,0,0.15);
+        border-top: 1px solid rgba(0,0,0,0.1);
+    }
+    
+    body.single.is-dark-theme .mobile-sticky-player {
+        background: #1e1e1e;
+        color: #e0e0e0;
+        border-top-color: #333;
+    }
+    
+    /* Mobile Progress Bar (no time display) */
+    .mobile-player-progress-container {
+        margin-bottom: 12px;
+    }
+    
+    .mobile-player-progress-container input[type="range"] {
+        width: 100%;
+        height: 4px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(0,0,0,0.1);
+        border-radius: 2px;
+        outline: none;
+    }
+    
+    body.is-dark-theme .mobile-player-progress-container input[type="range"] {
+        background: rgba(255,255,255,0.2);
+    }
+    
+    .mobile-player-progress-container input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        background: #007bff;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    
+    body.is-dark-theme .mobile-player-progress-container input[type="range"]::-webkit-slider-thumb {
+        background: #ff6600;
+    }
+    
+    .mobile-player-progress-container input[type="range"]::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: #007bff;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+    }
+    
+    body.is-dark-theme .mobile-player-progress-container input[type="range"]::-moz-range-thumb {
+        background: #ff6600;
+    }
+    
+    /* Mobile Player Controls (3 buttons in a row) */
+    .mobile-player-controls {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+    }
+    
+    .mobile-control-btn {
+        background: rgba(0,0,0,0.05);
+        border: none;
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 12px;
+        font-weight: 600;
+        color: #333;
+        padding: 0;
+    }
+    
+    body.is-dark-theme .mobile-control-btn {
+        background: rgba(255,255,255,0.1);
+        color: #e0e0e0;
+    }
+    
+    .mobile-control-btn:hover {
+        background: rgba(0,0,0,0.1);
+        transform: scale(1.05);
+    }
+    
+    body.is-dark-theme .mobile-control-btn:hover {
+        background: rgba(255,255,255,0.15);
+    }
+    
+    /* Play button (larger) */
+    .mobile-play-btn {
+        width: 56px;
+        height: 56px;
+        background: #007bff !important;
+        color: #fff !important;
+    }
+    
+    body.is-dark-theme .mobile-play-btn {
+        background: #ff6600 !important;
+    }
+    
+    .mobile-play-btn:hover {
+        background: #0056b3 !important;
+    }
+    
+    body.is-dark-theme .mobile-play-btn:hover {
+        background: #cc5200 !important;
+    }
+    
+    /* Hide PC player on mobile */
+    body.single .custom-fixed-sidebar {
+        display: none;
+    }
+    
+    /* Add bottom padding to content to prevent overlap with sticky player */
+    body.single .site-content,
+    body.single #primary {
+        padding-bottom: 100px; /* Height of player + buffer */
+    }
+    
+    /* Add bottom padding to footer to prevent overlap with sticky player */
+    body.single .site-footer {
+        padding-bottom: 110px;
     }
 }
 

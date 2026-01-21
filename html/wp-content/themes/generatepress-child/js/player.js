@@ -1,15 +1,18 @@
 jQuery(document).ready(function($) {
-    // --- 要素の取得 ---
+    // --- 要素の取得（PC用とモバイル用の両方） ---
     const $trackTitle = $('#player-track-title');
     const $currentTime = $('#player-current-time');
     const $duration = $('#player-duration');
-    const $seekBar = $('#player-seek-bar');
-    const $playBtn = $('#player-btn-play');
-    const $rewindBtn = $('#player-btn-rewind');
-    const $forwardBtn = $('#player-btn-forward');
+    const $seekBar = $('#player-seek-bar, #mobile-player-seek-bar');
+    const $playBtn = $('#player-btn-play, #mobile-player-btn-play');
+    const $rewindBtn = $('#player-btn-rewind, #mobile-player-btn-rewind');
+    const $forwardBtn = $('#player-btn-forward, #mobile-player-btn-forward');
     const $speedBtn = $('#player-btn-speed');
     const $volumeBar = $('#player-volume-bar');
     const $downloadBtn = $('#player-btn-download');
+    
+    // シークバーを即座に初期位置（0%）に設定
+    $seekBar.val(0);
 
     // --- 状態管理 ---
     let audio = new Audio();
@@ -19,6 +22,22 @@ jQuery(document).ready(function($) {
     
     // 現在再生中のボタン（記事内の）への参照
     let $currentArticleBtn = null;
+    
+    // --- 初期設定：デフォルトで日本語音声をセット ---
+    $(function() {
+        const $japaneseBtn = $('.podcast-play-button').first();
+        if ($japaneseBtn.length && $japaneseBtn.data('src')) {
+            const src = $japaneseBtn.data('src');
+            const title = $japaneseBtn.data('title');
+            audio.src = src;
+            audio.load();
+            $trackTitle.text(title);
+            if ($downloadBtn.length) {
+                $downloadBtn.attr('href', src).removeClass('disabled');
+            }
+            $currentArticleBtn = $japaneseBtn;
+        }
+    });
 
     // --- ヘルパー関数 ---
     
@@ -30,9 +49,9 @@ jQuery(document).ready(function($) {
         return m + ":" + (s < 10 ? "0" : "") + s;
     }
 
-    // SVG定義
-    const svgPlay = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-    const svgPause = '<svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
+    // SVG定義（モバイル用は28px、PC用は24px）
+    const svgPlay = '<svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
+    const svgPause = '<svg viewBox="0 0 24 24" width="28" height="28" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>';
 
     // プレイヤーの再生状態を更新（ボタン表示など）
     function updatePlayState(playing) {
@@ -44,7 +63,6 @@ jQuery(document).ready(function($) {
                     // 再生開始成功
                     isPlaying = true;
                     $playBtn.html(svgPause);
-                    $playBtn.css('padding-left', '0'); // SVG化したので位置調整リセット
                     if ($currentArticleBtn) {
                         // アイコンをWaveアニメーションに変更
                         const $iconParams = '<div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>';
@@ -61,8 +79,7 @@ jQuery(document).ready(function($) {
         } else {
             audio.pause();
             isPlaying = false;
-            $playBtn.html(svgPlay); 
-            $playBtn.css('padding-left', '2px'); // Playアイコンの視覚調整
+            $playBtn.html(svgPlay);
             if ($currentArticleBtn) {
                 // Now Playingの状態から元に戻す
                 $currentArticleBtn.find('.icon-container').html('▶');
@@ -121,14 +138,29 @@ jQuery(document).ready(function($) {
             
             $currentArticleBtn = $btn;
             updatePlayState(true);
-            $playBtn.css('padding-left', '0');
         }
     });
 
 
     // 2. プレイヤーの再生/一時停止ボタン
     $playBtn.on('click', function() {
-        if (!audio.src) return; // 曲がセットされてなければ何もしない
+        if (!audio.src) {
+            // 音声がセットされていない場合、日本語音声を自動セット
+            const $japaneseBtn = $('.podcast-play-button').first();
+            if ($japaneseBtn.length && $japaneseBtn.data('src')) {
+                const src = $japaneseBtn.data('src');
+                const title = $japaneseBtn.data('title');
+                audio.src = src;
+                audio.load();
+                $trackTitle.text(title);
+                if ($downloadBtn.length) {
+                    $downloadBtn.attr('href', src).removeClass('disabled');
+                }
+                $currentArticleBtn = $japaneseBtn;
+            } else {
+                return; // それでも音声がない場合は何もしない
+            }
+        }
         updatePlayState(!isPlaying);
     });
 
@@ -214,9 +246,9 @@ jQuery(document).ready(function($) {
     audio.addEventListener('ended', function() {
         // 再生終了時
         updatePlayState(false);
-        audio.currentTime = 0;
-        $seekBar.val(0);
-        $currentTime.text("0:00");
+        // シークバーを100%に保持
+        $seekBar.val(100);
+        $currentTime.text(formatTime(audio.duration));
     });
     
     // エラーハンドリング
