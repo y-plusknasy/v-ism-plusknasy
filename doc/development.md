@@ -99,11 +99,290 @@ firebase login --no-localhost
 firebase deploy
 ```
 
-## 6. ディレクトリ構造の補足
+## 6. 本番環境仕様
+
+### 6.1 サーバー環境（Xserver）
+*   **PHP バージョン**: 8.3.21
+*   **Composer バージョン**: 2.5.8
+*   **アクセス権限**: 共有レンタルサーバー（ルート権限なし）
+*   **SSH接続**: 利用可能
+*   **WP-CLI**: `/usr/bin/wp` としてインストール済み
+
+### 6.2 本番環境での Composer 利用
+*   **パッケージインストール先**: ユーザー領域（`wp-content/themes/generatepress-child/vendor/`）
+*   **権限**: ユーザー権限で完結（システムレベルのインストール不要）
+*   **デプロイフロー**:
+    1. ローカルで開発・テスト
+    2. `composer.json` と `composer.lock` を Git にコミット
+    3. GitHub Actions で本番デプロイ
+    4. 本番サーバーで `composer install --no-dev --optimize-autoloader` を実行
+
+## 7. Firebase 連携セットアップ
+
+### 7.1 概要
+WordPress管理画面から音声ファイルをアップロードすると、自動的にFirebase Storageへ転送され、カスタムフィールドにFirebaseの公開URLが設定される仕組みを実装します。
+
+### 7.2 必要な準備
+
+#### A. Firebase プロジェクトの作成
+1. [Firebase Console](https://console.firebase.google.com/) にアクセス
+2. 「プロジェクトを追加」をクリック
+3. プロジェクト名を入力（例: `wp-podcast-project`）
+4. Google Analytics は任意（推奨: 無効）
+5. プロジェクト作成完了
+
+#### B. Firebase Storage の有効化
+1. Firebase Console → 左メニュー「ビルド」→「Storage」
+2. 「始める」をクリック
+3. セキュリティルールは後で設定するため、デフォルトのまま「次へ」
+4. ロケーションを選択（推奨: `asia-northeast1` 東京）
+5. 「完了」をクリック
+
+#### C. サービスアカウントキーの取得
+1. Firebase Console → プロジェクト設定（歯車アイコン）
+2. 「サービスアカウント」タブ
+3. 「新しい秘密鍵の生成」をクリック
+4. JSON ファイルがダウンロードされる
+5. ファイル名を `firebase-credentials.json` にリネーム
+
+### 7.3 ローカル環境セットアップ
+
+#### A. composer.json の作成
+```bash
+# テーマディレクトリに移動
+cd /workspace/html/wp-content/themes/generatepress-child/
+
+# composer.json を作成
+cat > composer.json << 'EOF'
+{
+    "name": "generatepress-child/firebase-integration",
+    "description": "Firebase Storage integration for podcast audio files",
+    "require": {
+        "kreait/firebase-php": "^7.0"
+    },
+    "config": {
+        "platform": {
+            "php": "8.3"
+        },
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
+    }
+}
+EOF
+```
+
+#### B. Firebase Admin SDK のインストール
+```bash
+# 依存パッケージをインストール
+composer install
+
+# インストール確認
+ls -la vendor/kreait/firebase-php/
+```
+
+#### C. サービスアカウントキーの配置
+```bash
+# ダウンロードした JSON ファイルをテーマディレクトリにコピー
+# （実際のパスは環境に応じて調整）
+cp ~/Downloads/your-project-xxxxx.json firebase-credentials.json
+
+# パーミッション設定
+chmod 600 firebase-credentials.json
+```
+
+#### D. .gitignore の更新
+```bash
+# プロジェクトルートの .gitignore に追加
+cat >> /workspace/.gitignore << 'EOF'
+
+# Firebase credentials
+html/wp-content/themes/generatepress-child/firebase-credentials.json
+
+# Composer vendor (本番で再生成)
+html/wp-content/themes/generatepress-child/vendor/
+EOF
+```
+
+#### E. セキュリティ設定（.htaccess）
+```bash
+# テーマディレクトリに .htaccess を作成
+cat > .htaccess << 'EOF'
+# Deny access to sensitive files
+<Files "firebase-credentials.json">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "composer.json">
+    Order allow,deny
+    Deny from all
+</Files>
+
+<Files "composer.lock">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Prevent direct access to vendor directory
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteRule ^vendor/ - [F,L]
+</IfModule>
+EOF
+```
+
+### 7.4 Firebase Storage セキュリティルールの設定
+
+#### A. firebase.json の作成（プロジェクトルート）
+```bash
+cd /workspace
+
+cat > firebase.json << 'EOF'
+{
+  "storage": {
+    "rules": "storage.rules"
+  }
+}
+EOF
+```
+
+#### B. storage.rules の作成
+```bash
+cat > storage.rules << 'EOF'
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // 公開読み取り許可（音声ファイル配信用）
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if false; // WordPress側からのみアップロード
+    }
+    
+    // podcast フォルダ配下は認証済みユーザーのみ書き込み可能
+    match /podcast/{allPaths=**} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}
+EOF
+```
+
+#### C. Firebase CLI での初期化とデプロイ
+```bash
+# Firebase にログイン（初回のみ）
+firebase login --no-localhost
+
+# プロジェクトを初期化
+firebase use --add
+# プロジェクトIDを入力し、エイリアスを設定（例: default）
+
+# Storage ルールをデプロイ
+firebase deploy --only storage
+```
+
+### 7.5 動作確認
+
+#### A. 簡易テストコードの実行
+```bash
+# テーマディレクトリに移動
+cd /workspace/html/wp-content/themes/generatepress-child/
+
+# テストPHPスクリプトを作成
+cat > test-firebase.php << 'EOF'
+<?php
+require_once __DIR__ . '/vendor/autoload.php';
+
+use Kreait\Firebase\Factory;
+
+$serviceAccountPath = __DIR__ . '/firebase-credentials.json';
+
+if (!file_exists($serviceAccountPath)) {
+    die("Error: firebase-credentials.json not found\n");
+}
+
+try {
+    $firebase = (new Factory)
+        ->withServiceAccount($serviceAccountPath);
+    
+    $storage = $firebase->createStorage();
+    $bucket = $storage->getBucket();
+    
+    echo "✓ Firebase connection successful!\n";
+    echo "Bucket name: " . $bucket->name() . "\n";
+} catch (Exception $e) {
+    echo "✗ Firebase connection failed: " . $e->getMessage() . "\n";
+}
+EOF
+
+# テスト実行
+php test-firebase.php
+
+# テスト後はファイル削除
+rm test-firebase.php
+```
+
+### 7.6 本番環境へのデプロイ
+
+#### A. ローカルでの準備
+```bash
+# Git にコミット（vendor/ は除外）
+git add composer.json composer.lock firebase.json storage.rules
+git add html/wp-content/themes/generatepress-child/.htaccess
+git commit -m "Add Firebase Storage integration setup"
+git push origin main
+```
+
+#### B. 本番サーバーでの作業
+```bash
+# SSH接続
+ssh your-account@your-server.xsrv.jp
+
+# テーマディレクトリに移動
+cd ~/your-domain/public_html/wp-content/themes/generatepress-child/
+
+# Composer パッケージをインストール
+composer install --no-dev --optimize-autoloader
+
+# サービスアカウントキーを手動アップロード（SFTPなど）
+# firebase-credentials.json を配置
+
+# パーミッション設定
+chmod 600 firebase-credentials.json
+chmod 755 vendor/
+
+# 動作確認（上記のテストスクリプトを実行）
+```
+
+## 8. ディレクトリ構造の補足
 *   `/workspace`: コンテナ内のワークスペースルート。ホストのプロジェクトルートと同期しています。
 *   `/var/www/html`: WordPress のドキュメントルート。ホストの `html/` ディレクトリと同期しています。
 
-## 7. 実装状況ログ (2024-05-XX 更新)
+## 8. ディレクトリ構造の補足
+*   `/workspace`: コンテナ内のワークスペースルート。ホストのプロジェクトルートと同期しています。
+*   `/var/www/html`: WordPress のドキュメントルート。ホストの `html/` ディレクトリと同期しています。
+
+**Firebase 連携後の構造**:
+```
+wp-site-podcast/
+├── firebase.json              # Firebase 設定ファイル
+├── storage.rules              # Storage セキュリティルール
+├── html/
+│   └── wp-content/
+│       └── themes/
+│           └── generatepress-child/
+│               ├── composer.json
+│               ├── composer.lock
+│               ├── vendor/           # Git管理外
+│               │   └── kreait/
+│               │       └── firebase-php/
+│               ├── firebase-credentials.json  # Git管理外
+│               ├── .htaccess         # セキュリティ設定
+│               └── functions.php
+```
+
+## 9. 実装状況ログ
 
 ### 7.1 プレイヤー UI の改修
 *   **Dual Language Buttons**: 日本語版と英語版の2つの再生ボタンを設置。カスタムフィールド (`podcast_audio_url`, `podcast_audio_url_en`) が空の場合はボタンを無効化し "Coming Soon..." を表示する仕様に変更。
@@ -117,12 +396,18 @@ firebase deploy
     *   *決定事項*: RSSフィードの実装および Apple/Spotify 等のボタン設置は、外部プラットフォームのアカウント準備が整うまで**延期**とする。現在はプレースホルダー `(Links coming soon)` を表示中。
     *   *削除*: PHP/CSS/JSからRSSアイコンおよび関連する記述を完全に削除。
 
-### 7.3 レイアウト・表示の微調整
+### 9.3 レイアウト・表示の微調整
 *   **メタ情報**: トップページ一覧および記事詳細にて、投稿日横の「投稿者名」を非表示に変更。
 *   **コメント欄**: 記事詳細ページのコメントフォームを削除。
 *   **Sticky Footer**: コンテンツ量が少ないページでもフッターが画面最下部に固定されるよう修正 (`display: flex` & `#page { flex: 1 }`)。
 *   **クレジット表記**: フッターの著作権表記を `{SiteName} © {Year}+knasy` 形式に変更。
 *   **プレイヤー位置調整**: コンテンツが少ないページでプレイヤーがヘッダーと被る問題を修正 (初期マージン確保)。
 
+### 9.4 モバイル対応（2026-01-21）
+*   **モバイル専用プレイヤー**: 記事詳細ページでのみ画面下部に固定表示。
+*   **UI構成**: シークバー + 3ボタン（-15s / Play・Pause / +30s）。
+*   **ダークモード対応**: オレンジアクセント（#ff6600）。
+*   **フッター対応**: `padding-bottom: 110px` でプレイヤーと重ならないよう調整。
+
 ---
-**Last Updated**: 2026-01-18
+**Last Updated**: 2026-01-25
