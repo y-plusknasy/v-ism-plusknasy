@@ -27,6 +27,72 @@ Firebase Storage へアップロード
 - **管理の一元化**: WordPress管理画面のみで完結、Firebase Consoleを直接操作する必要なし
 - **転送量削減**: 音声ファイルはFirebase CDN経由で配信、Xserverの転送量を節約
 - **高速配信**: Googleのグローバルネットワークによる高速・安定配信
+- **バージョン管理**: Firebase Storageの実データから自動的にバージョン番号を取得、削除してもバックアップが残る設計
+
+---
+
+## ファイル構造とバージョン管理
+
+### ディレクトリ構造
+
+Firebase Storage内のファイルは以下のパターンで保存されます：
+
+```
+audio/
+  └── post-{投稿ID}/
+      ├── ja-v1-1234567890.mp3
+      ├── ja-v2-1234567891.mp3
+      └── en-v1-1234567892.mp3
+```
+
+**パス形式**: `audio/post-{投稿ID}/{lang}-v{version}-{timestamp}.mp3`
+
+- `{投稿ID}`: WordPressの投稿ID (例: `123`)
+- `{lang}`: 言語コード (`ja` または `en`)
+- `{version}`: バージョン番号 (1から始まる連番)
+- `{timestamp}`: Unixタイムスタンプ (衝突回避用)
+
+### バージョン管理の仕組み
+
+#### 自動バージョン採番
+
+新しいファイルをアップロードすると、システムが自動的に次のバージョン番号を決定します：
+
+1. **Firebase Storageをクエリ**: `audio/post-{ID}/{lang}-v` で始まるファイルを検索
+2. **最大バージョンを抽出**: 正規表現でバージョン番号を抽出し、最大値を取得
+3. **インクリメント**: `max_version + 1` を新しいバージョン番号として使用
+
+```php
+function get_next_audio_version($post_id, $lang) {
+    $bucket = get_firebase_storage();
+    $prefix = 'audio/post-' . $post_id . '/' . $lang . '-v';
+    $objects = $bucket->objects(['prefix' => $prefix]);
+    
+    $max_version = 0;
+    foreach ($objects as $object) {
+        if (preg_match('/' . preg_quote($lang, '/') . '-v(\d+)-/', $object->name(), $matches)) {
+            $version = intval($matches[1]);
+            if ($version > $max_version) {
+                $max_version = $version;
+            }
+        }
+    }
+    
+    return $max_version + 1;
+}
+```
+
+#### URL削除の挙動
+
+管理画面の「このURLを削除」ボタンは、**WordPressのカスタムフィールドからURLを削除するのみ**で、Firebase Storage上のファイルは削除しません。
+
+**メリット**:
+- 誤操作時の復旧が可能
+- 過去バージョンのバックアップとして保持
+- Firebase Consoleから手動で削除可能
+
+**デメリット**:
+- Storage容量を消費し続ける（定期的な手動クリーンアップが必要）
 
 ---
 
@@ -78,6 +144,45 @@ composer install
 **確認事項**:
 - `vendor/kreait/firebase-php/` が生成されること
 - `vendor/autoload.php` が存在すること
+
+#### コード構造 (モジュール化)
+
+子テーマは保守性向上のため、機能ごとにモジュール化されています：
+
+**functions.php** (21行 - エントリーポイント):
+```php
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/inc/security.php';
+require_once __DIR__ . '/inc/firebase.php';
+require_once __DIR__ . '/inc/admin-audio-upload.php';
+require_once __DIR__ . '/inc/admin-post-columns.php';
+require_once __DIR__ . '/inc/frontend-ui.php';
+```
+
+**inc/firebase.php** (131行):
+- `get_firebase_storage()`: Bucketインスタンス取得（静的キャッシュ）
+- `upload_audio_to_firebase()`: ファイルアップロード処理
+- `get_next_audio_version()`: バージョン番号の自動取得
+
+**inc/admin-audio-upload.php** (267行):
+- `add_podcast_audio_meta_box()`: メタボックス登録
+- `render_podcast_audio_meta_box()`: 日英ファイル入力UI
+- `save_podcast_audio_meta_box()`: 投稿保存時のアップロード処理
+- `ajax_delete_podcast_audio_url()`: URL削除AJAX処理
+- `process_audio_upload()`: ファイルバリデーション
+
+**inc/admin-post-columns.php** (34行):
+- 投稿一覧にID列を追加（Firebase管理用）
+
+**inc/security.php** (18行):
+- XML-RPC無効化
+- WordPressバージョン情報の非表示
+
+**inc/frontend-ui.php** (371行):
+- PC固定サイドバープレイヤー
+- モバイルスティッキープレイヤー
+- 再生ボタン、フッターカスタマイズ
+- スマートヘッダー連携
 
 #### 2. 認証情報の配置
 

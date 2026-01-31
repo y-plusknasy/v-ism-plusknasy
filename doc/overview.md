@@ -17,6 +17,10 @@
     * ポッドキャスト音声ファイル（.mp3）の格納。
     * Googleのグローバルネットワーク（CDN）を利用した高速配信。
     * サーバー転送量の削減と、再生時レスポンスの向上。
+    * **ディレクトリ構造**: `audio/post-{投稿ID}/{lang}-v{version}-{timestamp}.mp3`
+        * 投稿IDごとにディレクトリを分離し、管理を容易化
+        * バージョン番号は Firebase Storage の実データから自動取得
+        * 言語コード: `ja` (日本語) / `en` (英語)
 
 ### 2.2 開発基盤
 * **Docker / Dev Container**: ローカルでの環境差異をなくし、ツール一式（WP-CLI, Firebase CLI, GH CLI）を内包。
@@ -80,16 +84,35 @@ wp-site/
 ├── .devcontainer/    # 開発環境の定義（Dockerfile, devcontainer.json）
 ├── .github/          # CI/CD (Actions) のワークフロー定義
 ├── doc/              # プロジェクトドキュメント
-│   ├── overview.md       # 本ドキュメント
-│   └── development.md    # 開発環境構築ガイド
+│   ├── overview.md           # 本ドキュメント
+│   ├── development.md        # 開発環境構築ガイド
+│   ├── firebase-integration.md  # Firebase連携ガイド
+│   └── theme-design.md       # テーマデザイン仕様
 ├── html/             # WordPress 実行ディレクトリ（Xserver同期対象）
 │   ├── wp-content/
-│   │   ├── themes/   # GeneratePress 及び 子テーマ
-│   │   └── plugins/  # ポッドキャスト関連プラグイン
+│   │   └── themes/
+│   │       └── generatepress-child/  # 子テーマ
+│   │           ├── functions.php      # エントリーポイント (21行)
+│   │           ├── style.css          # カスタムスタイル
+│   │           ├── inc/               # モジュール化されたPHP
+│   │           │   ├── security.php           # セキュリティ設定
+│   │           │   ├── firebase.php           # Firebase Storage連携
+│   │           │   ├── admin-audio-upload.php # 管理画面UI
+│   │           │   ├── admin-post-columns.php # 投稿ID列表示
+│   │           │   └── frontend-ui.php        # フロントエンドUI
+│   │           ├── js/                # JavaScriptファイル
+│   │           │   ├── player.js              # オーディオプレイヤー
+│   │           │   ├── smart-header.js        # スマートヘッダー
+│   │           │   ├── theme-switcher.js      # ダークモード切替
+│   │           │   └── infinite-scroll.js     # 無限スクロール
+│   │           ├── vendor/            # Composer依存関係
+│   │           ├── composer.json      # Composer設定
+│   │           └── {project}-firebase-credentials.json  # Firebase認証情報
 │   └── wp-config.php # 環境変数を優先読み込みするように調整済み
 ├── wp-cli.yml        # WP-CLI 設定ファイル（パス解決・SSL設定等）
 ├── wp-config-docker.php # Docker環境用 wp-config (URL固定設定等)
 ├── firebase.json     # Firebase 設定ファイル
+├── storage.rules     # Firebase Storage セキュリティルール
 ├── local_backup.sql  # ローカル開発用データベース・ダンプ (Git管理外)
 ├── compose.yml       # Docker Compose 構成定義
 ├── .env              # ローカル環境変数（Git管理外）

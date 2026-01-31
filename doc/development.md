@@ -71,7 +71,39 @@ DB_PASSWORD=password
 *   **Git 除外設定 (`.gitignore`)**:
     *   `html/wp-config.php`, `.env`, `local_backup.sql`, `html/wp-content/uploads/` などの秘匿情報やバイナリデータは Git 管理対象外となっています。
 
-## 5. 主な操作コマンド (Tips)
+## 5. テーマのディレクトリ構造
+
+子テーマ (`generatepress-child`) は機能ごとにモジュール化されています：
+
+```
+generatepress-child/
+├── functions.php              # エントリーポイント (21行)
+├── style.css                  # カスタムCSS
+├── inc/                       # モジュール化されたPHP
+│   ├── security.php           # セキュリティ設定 (18行)
+│   ├── firebase.php           # Firebase Storage連携 (131行)
+│   ├── admin-audio-upload.php # 管理画面UI (267行)
+│   ├── admin-post-columns.php # 投稿ID列表示 (34行)
+│   └── frontend-ui.php        # フロントエンドUI (371行)
+├── js/                        # JavaScript
+│   ├── player.js              # オーディオプレイヤー
+│   ├── smart-header.js        # スマートヘッダー
+│   ├── theme-switcher.js      # ダークモード切替
+│   └── infinite-scroll.js     # 無限スクロール
+├── vendor/                    # Composer依存関係 (gitignore)
+├── composer.json              # Composer設定
+├── composer.lock              # 依存関係ロック
+└── {project}-firebase-credentials.json  # Firebase認証情報 (gitignore)
+```
+
+### モジュール化のメリット
+
+- **保守性向上**: 機能ごとにファイルが分離され、修正箇所が明確
+- **可読性向上**: 元の899行のfunctions.phpが21行のエントリーポイントに
+- **テスト容易性**: 各モジュールが独立しており、単体テストが可能
+- **チーム開発**: 複数人での同時編集時のコンフリクトを軽減
+
+## 6. 主な操作コマンド (Tips)
 
 すべての操作は、VS Code の統合ターミナル（コンテナ内部）から実行します。
 
@@ -88,6 +120,10 @@ wp db import local_backup.sql
 
 # ユーザー一覧
 wp user list
+
+# テーマのPHPシンタックスチェック
+php -l /var/www/html/wp-content/themes/generatepress-child/functions.php
+php -l /var/www/html/wp-content/themes/generatepress-child/inc/*.php
 ```
 
 ### Firebase 関連
@@ -97,6 +133,22 @@ firebase login --no-localhost
 
 # デプロイ (Storage ルールなど)
 firebase deploy
+
+# Storageルールのテスト
+firebase emulators:start --only storage
+```
+
+### Composer 関連
+```bash
+# 依存関係のインストール
+cd /var/www/html/wp-content/themes/generatepress-child
+composer install
+
+# 依存関係の更新
+composer update
+
+# オートローダーの再生成
+composer dump-autoload
 ```
 
 ## 6. 本番環境仕様

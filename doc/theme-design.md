@@ -115,19 +115,59 @@ Twitter (X) 風の「縦スクロール・タイムライン」をベースに�
     *   PC版プレイヤー（サイドバー）はモバイルでは非表示。
     *   フッターに `padding-bottom: 110px` を追加し、プレイヤーで隠れないように配慮。
 
-## 5. 課題と今後の展望
-*   **SPA遷移**: ページ遷移時にオーディオが途切れる問題は未解決。将来的にはBarba.js導入等のSPA化を検討。
+## 5. コード構造とモジュール化
 
+### 5.1 functions.php のモジュール化
+
+保守性向上のため、元の899行の `functions.php` を機能ごとに分割し、21行のエントリーポイントに集約：
+
+```php
+// functions.php (21行)
+require_once __DIR__ . '/vendor/autoload.php';
+require_once __DIR__ . '/inc/security.php';
+require_once __DIR__ . '/inc/firebase.php';
+require_once __DIR__ . '/inc/admin-audio-upload.php';
+require_once __DIR__ . '/inc/admin-post-columns.php';
+require_once __DIR__ . '/inc/frontend-ui.php';
 ```
 
-## 5. 開発プロセス
-GeneratePress **無料版** の機能をベースに、子テーマでの開発を行う。
+### 5.2 モジュール構成
 
-1.  子テーマ (`generatepress-child`) の作成と有効化。
-2.  **右サイドバーレイアウトの構築**:
-    *   GeneratePressのデフォルト2カラム設定を利用しつつ、CSS Flexbox/Gridで左寄せと固定配置を調整する。
-3.  **テンプレートカスタマイズ**:
-    *   記事ループ内に「日本語/英語」2つのボタンを出力するロジックを実装（カスタムフィールド等を利用）。
-4.  **JavaScriptプレイヤー実装**:
-    *   右側の固定プレイヤーと、各カードのボタンを連動させるJS制御を実装。
-    *   無限スクロールライブラリ (例: Infinite Scroll) の導入。
+#### inc/security.php (18行)
+- XML-RPC無効化 (`xmlrpc_enabled` フィルター)
+- WordPressバージョン情報の非表示 (`wp_generator` 削除)
+
+#### inc/firebase.php (131行)
+- `get_firebase_storage()`: Bucketインスタンス取得（静的キャッシュ）
+- `upload_audio_to_firebase()`: ファイルアップロード処理
+- `get_next_audio_version()`: バージョン番号の自動取得
+
+#### inc/admin-audio-upload.php (267行)
+- `add_podcast_audio_meta_box()`: メタボックス登録
+- `render_podcast_audio_meta_box()`: 日英ファイル入力UI
+- `save_podcast_audio_meta_box()`: 投稿保存時のアップロード処理
+- `ajax_delete_podcast_audio_url()`: URL削除AJAX処理
+- `process_audio_upload()`: ファイルバリデーション
+
+#### inc/admin-post-columns.php (34行)
+- 投稿一覧にID列を追加（Firebase管理用）
+- ソート可能な列として実装
+
+#### inc/frontend-ui.php (371行)
+- `generatepress_child_add_fixed_sidebar()`: PC固定サイドバープレイヤー
+- `generatepress_child_add_mobile_player()`: モバイルスティッキープレイヤー
+- `generatepress_child_add_play_button()`: 再生ボタンUI
+- `generatepress_child_add_social_footer()`: SNSシェアボタン
+- スマートヘッダー・テーマ切り替え連携
+
+### 5.3 モジュール化のメリット
+
+- **可読性向上**: 各ファイルが単一責任を持ち、目的が明確
+- **保守性向上**: 修正箇所が特定しやすく、影響範囲が限定的
+- **テスト容易性**: 各モジュールが独立しており、単体テストが可能
+- **チーム開発**: 複数人での同時編集時のコンフリクトを軽減
+- **再利用性**: 他プロジェクトへの機能移植が容易
+
+## 6. 課題と今後の展望
+*   **SPA遷移**: ページ遷移時にオーディオが途切れる問題は未解決。将来的にはBarba.js導入等のSPA化を検討。
+*   **Firebase Storage クリーンアップ**: 古いバージョンの音声ファイルは手動削除が必要。自動クリーンアップスクリプトの検討。

@@ -32,8 +32,9 @@ local_backup.sql
 .env
 
 # Firebase credentials and dependencies
-html/wp-content/themes/generatepress-child/v-ism-plusknasy-firebase-credentials.json
+html/wp-content/themes/generatepress-child/*-firebase-credentials.json
 html/wp-content/themes/generatepress-child/vendor/
+# Note: composer.lock should be tracked for production dependency locking
 
 # System
 .DS_Store
