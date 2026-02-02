@@ -636,6 +636,11 @@ body.is-dark-theme h6 {
    color: #fff;
 }
 
+/* サイトサブタイトル（ヘッダー） */
+body.is-dark-theme .site-subtitle {
+    color: #aaa !important;
+}
+
 /* ============================
    ソーシャルアクション (いいね & SNS)
    ============================ */

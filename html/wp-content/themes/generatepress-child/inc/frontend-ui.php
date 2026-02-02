@@ -7,6 +7,25 @@
  */
 
 /**
+ * ヘッダーのサイトタイトル下にbloginfo（説明文）を小さく表示
+ */
+add_filter( 'generate_site_branding_output', function( $output ) {
+    $title = get_bloginfo( 'name' );
+    $description = get_bloginfo( 'description' );
+    
+    // タイトルが表示されている場合のみ、その下に説明文を追加
+    if ( ! empty( $title ) && ! empty( $description ) ) {
+        $output = str_replace(
+            '</div>',
+            '<p class="site-subtitle" style="margin: 0; font-size: 0.85em; color: #666; font-weight: 300;">' . esc_html( $description ) . '</p></div>',
+            $output
+        );
+    }
+    
+    return $output;
+} );
+
+/**
  * メインコンテンツの後に、PC用固定サイドバーを出力する
  * GeneratePressのフック 'generate_after_primary_content_area' を使用
  * (2カラムグリッドの右側として配置される)
