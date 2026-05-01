@@ -262,6 +262,11 @@ function process_audio_upload($file, $post_id, $lang) {
     
     // Firebaseにアップロード
     $public_url = upload_audio_to_firebase($file['tmp_name'], $remote_filename, $post_id, $lang);
+
+    // 一時ファイルを明示的に削除
+    if (file_exists($file['tmp_name']))  {
+        unlink($file['tmp_name']);
+    }
     
     return $public_url;
 }
