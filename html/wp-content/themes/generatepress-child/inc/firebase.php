@@ -52,17 +52,18 @@ function upload_audio_to_firebase($localFilePath, $remoteFileName, $post_id, $la
     $bucket = get_firebase_storage();
     
     if (!$bucket) {
-        error_log('Firebase bucket is null');
+        log_message('upload_audio_to_firebase: Firebase bucket is null, aborting upload', 'ERROR');
         return false;
     }
     
     try {
-        error_log('Firebase bucket name: ' . $bucket->name());
-        
         // パス構造: audio/post-{ID}/{lang}-v{version}-{timestamp}.mp3
         $remotePath = 'audio/post-' . $post_id . '/' . $remoteFileName;
         
-        error_log('Uploading to: ' . $remotePath);
+        log_message(
+            sprintf('Firebase upload start: post_id=%d lang=%s path=%s', $post_id, $lang, $remotePath),
+            'INFO'
+        );
         
         // ファイルをアップロード
         $bucket->upload(
@@ -80,10 +81,15 @@ function upload_audio_to_firebase($localFilePath, $remoteFileName, $post_id, $la
             $remotePath
         );
         
+        log_message('Firebase upload success: ' . $publicUrl, 'INFO');
+        
         return $publicUrl;
         
     } catch (Exception $e) {
-        error_log('Firebase upload failed: ' . $e->getMessage());
+        log_message(
+            sprintf('Firebase upload failed: post_id=%d lang=%s error=%s', $post_id, $lang, $e->getMessage()),
+            'ERROR'
+        );
         return false;
     }
 }
@@ -99,12 +105,16 @@ function get_next_audio_version($post_id, $lang) {
     $bucket = get_firebase_storage();
     
     if (!$bucket) {
-        error_log('Firebase bucket is null in get_next_audio_version');
+        log_message('get_next_audio_version: Firebase bucket is null, returning version 1', 'ERROR');
         return 1;
     }
     
     try {
         $prefix = 'audio/post-' . $post_id . '/' . $lang . '-v';
+        log_message(
+            sprintf('get_next_audio_version: searching prefix="%s"', $prefix),
+            'INFO'
+        );
         
         // 該当ディレクトリ内のファイル一覧を取得
         $objects = $bucket->objects(['prefix' => $prefix]);
@@ -122,10 +132,19 @@ function get_next_audio_version($post_id, $lang) {
             }
         }
         
-        return $max_version + 1;
+        $next_version = $max_version + 1;
+        log_message(
+            sprintf('get_next_audio_version: post_id=%d lang=%s current_max=%d next=%d', $post_id, $lang, $max_version, $next_version),
+            'INFO'
+        );
+        
+        return $next_version;
         
     } catch (Exception $e) {
-        error_log('Failed to get audio version from Firebase: ' . $e->getMessage());
+        log_message(
+            sprintf('get_next_audio_version failed: post_id=%d lang=%s error=%s', $post_id, $lang, $e->getMessage()),
+            'ERROR'
+        );
         return 1;
     }
 }

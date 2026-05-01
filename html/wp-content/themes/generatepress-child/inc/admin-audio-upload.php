@@ -176,6 +176,7 @@ function save_podcast_audio_meta_box($post_id) {
         return;
     }
     if (!wp_verify_nonce($_POST['podcast_audio_meta_box_nonce'], 'podcast_audio_meta_box')) {
+        log_message('save_podcast_audio_meta_box: nonce verification failed for post_id=' . $post_id, 'WARNING');
         return;
     }
     
@@ -186,22 +187,33 @@ function save_podcast_audio_meta_box($post_id) {
     
     // 権限確認
     if (!current_user_can('edit_post', $post_id)) {
+        log_message('save_podcast_audio_meta_box: permission denied for post_id=' . $post_id, 'WARNING');
         return;
     }
     
+    log_message('save_podcast_audio_meta_box: triggered for post_id=' . $post_id, 'INFO');
+    
     // 日本語音声の処理
     if (isset($_FILES['podcast_audio_file_jp']) && $_FILES['podcast_audio_file_jp']['error'] === UPLOAD_ERR_OK) {
+        log_message('save_podcast_audio_meta_box: JP audio file received, starting upload for post_id=' . $post_id, 'INFO');
         $result = process_audio_upload($_FILES['podcast_audio_file_jp'], $post_id, 'ja');
         if ($result) {
             update_post_meta($post_id, 'podcast_audio_url', $result);
+            log_message('save_podcast_audio_meta_box: podcast_audio_url updated for post_id=' . $post_id, 'INFO');
+        } else {
+            log_message('save_podcast_audio_meta_box: JP audio upload failed for post_id=' . $post_id, 'ERROR');
         }
     }
     
     // 英語音声の処理
     if (isset($_FILES['podcast_audio_file_en']) && $_FILES['podcast_audio_file_en']['error'] === UPLOAD_ERR_OK) {
+        log_message('save_podcast_audio_meta_box: EN audio file received, starting upload for post_id=' . $post_id, 'INFO');
         $result = process_audio_upload($_FILES['podcast_audio_file_en'], $post_id, 'en');
         if ($result) {
             update_post_meta($post_id, 'podcast_audio_url_en', $result);
+            log_message('save_podcast_audio_meta_box: podcast_audio_url_en updated for post_id=' . $post_id, 'INFO');
+        } else {
+            log_message('save_podcast_audio_meta_box: EN audio upload failed for post_id=' . $post_id, 'ERROR');
         }
     }
 }
@@ -213,6 +225,7 @@ add_action('save_post', 'save_podcast_audio_meta_box');
 function ajax_delete_podcast_audio_url() {
     // Nonce確認
     if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'delete_audio_url_nonce')) {
+        log_message('ajax_delete_podcast_audio_url: invalid nonce', 'WARNING');
         wp_send_json_error('Invalid nonce');
         return;
     }
@@ -220,6 +233,7 @@ function ajax_delete_podcast_audio_url() {
     // 権限確認
     $post_id = intval($_POST['post_id']);
     if (!current_user_can('edit_post', $post_id)) {
+        log_message('ajax_delete_podcast_audio_url: permission denied for post_id=' . $post_id, 'WARNING');
         wp_send_json_error('Permission denied');
         return;
     }
@@ -227,8 +241,18 @@ function ajax_delete_podcast_audio_url() {
     $lang = sanitize_text_field($_POST['lang']);
     $meta_key = ($lang === 'ja') ? 'podcast_audio_url' : 'podcast_audio_url_en';
     
+    log_message(
+        sprintf('ajax_delete_podcast_audio_url: deleting meta_key=%s for post_id=%d', $meta_key, $post_id),
+        'INFO'
+    );
+    
     // URLを削除（Firebase上のファイルは削除しない）
     delete_post_meta($post_id, $meta_key);
+    
+    log_message(
+        sprintf('ajax_delete_podcast_audio_url: successfully deleted meta_key=%s for post_id=%d', $meta_key, $post_id),
+        'INFO'
+    );
     
     wp_send_json_success('URL deleted successfully');
 }
@@ -238,6 +262,11 @@ add_action('wp_ajax_delete_podcast_audio_url', 'ajax_delete_podcast_audio_url');
  * 音声ファイルのアップロード処理
  */
 function process_audio_upload($file, $post_id, $lang) {
+    log_message(
+        sprintf('process_audio_upload: start post_id=%d lang=%s size=%d bytes', $post_id, $lang, $file['size']),
+        'INFO'
+    );
+    
     // ファイルタイプ確認
     $allowed_types = ['audio/mpeg', 'audio/mp3'];
     $finfo = finfo_open(FILEINFO_MIME_TYPE);
@@ -245,11 +274,19 @@ function process_audio_upload($file, $post_id, $lang) {
     finfo_close($finfo);
     
     if (!in_array($mime_type, $allowed_types)) {
+        log_message(
+            sprintf('process_audio_upload: invalid MIME type "%s" for post_id=%d lang=%s', $mime_type, $post_id, $lang),
+            'WARNING'
+        );
         return false;
     }
     
     // ファイルサイズ確認（100MB）
     if ($file['size'] > 100 * 1024 * 1024) {
+        log_message(
+            sprintf('process_audio_upload: file size %d bytes exceeds 100MB limit for post_id=%d lang=%s', $file['size'], $post_id, $lang),
+            'WARNING'
+        );
         return false;
     }
     
@@ -259,13 +296,18 @@ function process_audio_upload($file, $post_id, $lang) {
     // ファイル名生成: {lang}-v{version}-{timestamp}.mp3
     $timestamp = time();
     $remote_filename = sprintf('%s-v%d-%d.mp3', $lang, $version, $timestamp);
+    log_message(
+        sprintf('process_audio_upload: remote filename=%s post_id=%d', $remote_filename, $post_id),
+        'INFO'
+    );
     
     // Firebaseにアップロード
     $public_url = upload_audio_to_firebase($file['tmp_name'], $remote_filename, $post_id, $lang);
-
+    
     // 一時ファイルを明示的に削除
-    if (file_exists($file['tmp_name']))  {
+    if (file_exists($file['tmp_name'])) {
         unlink($file['tmp_name']);
+        log_message('process_audio_upload: temp file deleted: ' . $file['tmp_name'], 'INFO');
     }
     
     return $public_url;

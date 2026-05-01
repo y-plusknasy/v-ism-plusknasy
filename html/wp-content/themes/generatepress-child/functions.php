@@ -8,6 +8,9 @@
 // Composer autoload
 require_once __DIR__ . '/vendor/autoload.php';
 
+// Logger（他のincより先に読み込む）
+require_once __DIR__ . '/inc/logger.php';
+
 // Security settings
 require_once __DIR__ . '/inc/security.php';
 
