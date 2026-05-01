@@ -1,4 +1,4 @@
-path: /var/www/html
+# path: /var/www/html
 
 db check:
   skip-ssl: true

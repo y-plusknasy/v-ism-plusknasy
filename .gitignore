@@ -24,6 +24,7 @@ mp3/*
 
 # User specific files
 .vscode/
+doc/
 
 # Database
 local_backup.sql
