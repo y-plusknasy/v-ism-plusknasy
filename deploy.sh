@@ -25,7 +25,7 @@ echo "=========================================="
 
 # 1. 子テーマのファイルを同期
 echo ""
-echo "[1/4] 子テーマ (generatepress-child) を同期中..."
+echo "[1/5] 子テーマ (generatepress-child) を同期中..."
 rsync -avz --delete \
   --exclude 'vendor/' \
   --exclude '*-firebase-credentials.json' \
@@ -34,38 +34,48 @@ rsync -avz --delete \
 
 # 2. wp-config-docker.php を同期（本番では使用しないがバックアップとして）
 echo ""
-echo "[2/4] wp-config-docker.php を同期中..."
+echo "[2/5] wp-config-docker.php を同期中..."
 rsync -avz \
   wp-config-docker.php \
   ${SSH_HOST}:${REMOTE_PATH}/
 
 # 3. wp-cli.yml を同期
 echo ""
-echo "[3/4] wp-cli.yml を同期中..."
+echo "[3/5] wp-cli.yml を同期中..."
 rsync -avz \
   wp-cli.yml \
   ${SSH_HOST}:${REMOTE_PATH}/
 
 # 4. Firebase設定ファイルを同期
 echo ""
-echo "[4/4] Firebase設定ファイルを同期中..."
+echo "[4/5] Firebase設定ファイルを同期中..."
 rsync -avz \
   firebase.json \
   storage.rules \
   cors.json \
   ${SSH_HOST}:${REMOTE_PATH}/
 
+# 5. シェルスクリプトと設定ファイルの同期
+REMOTE_HOME="/home/plusknasy"
+echo ""
+echo "[5/5] シェルスクリプトと設定ファイルを同期中..."
+rsync -avz \
+  scripts \
+  etc \
+  ${SSH_HOST}:${REMOTE_HOME}/
+
+
 echo ""
 echo "=========================================="
 echo "同期完了！"
 echo "=========================================="
 echo ""
-echo "次のステップ:"
-echo "  1. SSH接続: ssh ${SSH_HOST}"
-echo "  2. テーマディレクトリへ移動:"
-echo "     cd ${REMOTE_PATH}/wp-content/themes/generatepress-child"
-echo "  3. Composer依存関係をインストール:"
-echo "     composer install --no-dev --optimize-autoloader"
-echo "  4. Firebase認証情報を手動アップロード:"
-echo "     scp your-firebase-credentials.json ${SSH_HOST}:${REMOTE_PATH}/wp-content/themes/generatepress-child/firebase-credentials.json"
-echo ""
+# echo "次のステップ:"
+# echo "  1. SSH接続: ssh ${SSH_HOST}"
+# echo "  2. テーマディレクトリへ移動:"
+# echo "     cd ${REMOTE_PATH}/wp-content/themes/generatepress-child"
+# echo "  3. Composer依存関係をインストール:"
+# echo "     composer install --no-dev --optimize-autoloader"
+# echo "  4. Firebase認証情報を手動アップロード:"
+# echo "     scp your-firebase-credentials.json ${SSH_HOST}:${REMOTE_PATH}/wp-content/themes/generatepress-child/firebase-credentials.json"
+# echo ""

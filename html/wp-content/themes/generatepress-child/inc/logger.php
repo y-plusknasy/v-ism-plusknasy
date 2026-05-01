@@ -4,11 +4,14 @@
  *
  * ログの保存先・ファイル名プレフィックスは .env の設定を参照します。
  *
- * .env 設定キー:
- *   WP_LOG_DIR         ログ保存ディレクトリの絶対パス（デフォルト: /workspace/backups/logs）
- *   WP_LOG_FILE_PREFIX ログファイル名のプレフィックス（デフォルト: app）
+ * ログ保存先は wp-config.php で定義する定数 WP_APP_LOG_DIR を参照します。
+ * 未定義の場合は環境変数 WP_LOG_DIR を、それも未定義の場合は ABSPATH/logs を使用します。
  *
- * ログファイル名フォーマット: {WP_LOG_FILE_PREFIX}_{YYYYMM}.log
+ * wp-config.php 設定例:
+ *   define( 'WP_APP_LOG_DIR', '/home/plusknasy/logs' );  // 本番
+ *   define( 'WP_APP_LOG_DIR', '/workspace/backups/logs' ); // 開発
+ *
+ * ログファイル名フォーマット: {YYYYMM}.log
  * ログ行フォーマット:         YYYY-MM-DD HH:MM:SS [呼び出し元ファイル名] [LEVEL] メッセージ
  */
 
@@ -20,9 +23,12 @@
  * @return void
  */
 function log_message(string $message, string $level = 'INFO'): void {
-    $logDir    = rtrim((string)(getenv('WP_LOG_DIR') ?: '/workspace/backups/logs'), '/');
-    $prefix    = (string)(getenv('WP_LOG_FILE_PREFIX') ?: 'app');
-    $logFile   = $logDir . '/' . $prefix . '_' . date('Ym') . '.log';
+    if (defined('WP_APP_LOG_DIR')) {
+        $logDir = rtrim(WP_APP_LOG_DIR, '/');
+    } else {
+        $logDir = rtrim((string)(getenv('WP_LOG_DIR') ?: (defined('ABSPATH') ? ABSPATH . 'logs' : '/tmp/wp-logs')), '/');
+    }
+    $logFile   = $logDir . '/' . date('Ym') . '.log';
 
     // ディレクトリが存在しない場合は作成
     if (!is_dir($logDir)) {

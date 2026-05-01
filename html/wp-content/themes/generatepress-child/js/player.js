@@ -118,7 +118,7 @@ jQuery(document).ready(function($) {
             $playBtn.html(svgPlay);
             if ($currentArticleBtn) {
                 // Now Playingの状態から元に戻す
-                $currentArticleBtn.find('.icon-container').html('▶');
+                $currentArticleBtn.find('.icon-container').html('&#x25B6;&#xFE0E;');
                 
                 // data-original-textがある場合はそれを使う、なければデフォルト
                 const originalText = $currentArticleBtn.data('original-text') || 'Play Episode';
@@ -155,7 +155,7 @@ jQuery(document).ready(function($) {
                 
                 // アイコンリセット
                 if ($currentArticleBtn) {
-                    $currentArticleBtn.find('.icon-container').html('▶');
+                    $currentArticleBtn.find('.icon-container').html('&#x25B6;&#xFE0E;');
                     const originalText = $currentArticleBtn.data('original-text') || 'Play Episode';
                     $currentArticleBtn.find('.text-container').text(originalText);
                     $currentArticleBtn.removeClass('playing');

@@ -159,7 +159,7 @@ function generatepress_child_add_play_button() {
                     data-title="<?php the_title_attribute(); ?>"
                     data-lang="<?php echo esc_attr($lang); ?>"
                     data-original-text="<?php echo esc_attr($label); ?>">
-                <span class="icon-container">▶</span> 
+                <span class="icon-container">&#x25B6;&#xFE0E;</span> 
                 <span class="text-container"><?php echo esc_html($label); ?></span>
             </button>
             <?php

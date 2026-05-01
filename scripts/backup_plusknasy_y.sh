@@ -11,11 +11,18 @@ set -e # 何かエラーがあったら、そこで処理を中断する
 
 # 共通設定の読み込み
 CONFIG_FILE="/home/plusknasy/etc/backup_config.sh"
-if [ -f "$CONFIG_FILE" ]; then
+LOGGER_FILE="/home/plusknasy/scripts/common_logger.sh"
+if [[ -f "$CONFIG_FILE" && -f "$LOGGER_FILE" ]]; then
     source "$CONFIG_FILE"
+    source "$LOGGER_FILE"
     setup_logging
+elif [ ! -f "$CONFIG_FILE" ]; then
+    mkdir -p "/home/plusknasy/logs"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: Config file not found." >> "/home/plusknasy/logs/config_error.log"
+    exit 1
 else
-    log_message "ERROR: Configuration file not found at $CONFIG_FILE"
+    mkdir -p "/home/plusknasy/logs"
+    echo "$(date '+%Y-%m-%d %H:%M:%S') ERROR: Logger file not found." >> "/home/plusknasy/logs/config_error.log"
     exit 1
 fi
 
@@ -36,12 +43,15 @@ WP_OUTPUT=$(/home/plusknasy/bin/wp db export $FILENAME --path=/home/plusknasy/pl
 log_message "WP-CLI: $WP_OUTPUT"
 
 # 30日以上前のバックアップを削除
-DELETED_FILES=$(find "$BACKUP_DIR" -name "db_backup_*.sql" -mtime +30 -print -delete)
-
-if [ -n "$DELETED_FILES" ]; then
-    while read -r file; do
-        log_message "CLEANUP: Deleted old backup: $file"
-    done <<< "$DELETED_FILES"
+if [ -d "$BACKUP_DIR" ]; then
+    find "$BACKUP_DIR" -name "db_backup_*.sql" -mtime +30 | while read -r file; do
+        if [ -f "$file" ]; then
+            rm -f "$file"
+            log_message "CLEANUP: Deleted old backup: $file"
+        fi
+    done
 fi
 
 delete_logs
+
+log_message "INFO: Backup process completed successfully."
