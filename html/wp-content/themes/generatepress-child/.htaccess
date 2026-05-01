@@ -1,5 +1,5 @@
 # Deny access to sensitive files
-<Files "firebase-credentials.json">
+<Files "v-ism-plusknasy-firebase-credentials.json">
     Order allow,deny
     Deny from all
 </Files>
