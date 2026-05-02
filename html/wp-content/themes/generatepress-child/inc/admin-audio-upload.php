@@ -28,6 +28,15 @@ function render_podcast_audio_meta_box($post) {
     
     $audio_url_jp = get_post_meta($post->ID, 'podcast_audio_url', true);
     $audio_url_en = get_post_meta($post->ID, 'podcast_audio_url_en', true);
+
+    // アップロード結果をtransientから取得（一度読んだら削除）
+    $transient_key = 'podcast_audio_upload_' . get_current_user_id() . '_' . $post->ID;
+    $upload_results = get_transient($transient_key);
+    if ($upload_results !== false) {
+        delete_transient($transient_key);
+    } else {
+        $upload_results = ['jp' => null, 'en' => null];
+    }
     ?>
     <div class="podcast-audio-upload-container">
         <div style="background: #f0f0f1; padding: 10px; margin-bottom: 15px; border-left: 4px solid #2271b1;">
@@ -123,7 +132,30 @@ function render_podcast_audio_meta_box($post) {
     </div>
     
     <script>
+    var podcastAudioUploadResults = <?php echo wp_json_encode($upload_results); ?>;
+
     jQuery(document).ready(function($) {
+        // ページロード時に常にfile inputをリセット（ブラウザのセッション復元対策）
+        $('#podcast_audio_file_jp, #podcast_audio_file_en').val('');
+
+        // アップロード結果メッセージを表示
+        var langMap = { jp: '#podcast_audio_file_jp', en: '#podcast_audio_file_en' };
+        $.each(podcastAudioUploadResults, function(lang, result) {
+            if (result === null) return;
+            var $input = $(langMap[lang]);
+            var $field = $input.closest('.podcast-audio-field');
+            $field.find('.podcast-audio-upload-result').remove();
+            if (result === 'success') {
+                $field.append(
+                    '<div class="podcast-audio-status status-success podcast-audio-upload-result">✅ アップロード成功</div>'
+                );
+            } else {
+                $field.append(
+                    '<div class="podcast-audio-status status-error podcast-audio-upload-result">❌ アップロード失敗。ファイルを確認してください。</div>'
+                );
+            }
+        });
+
         $('.delete-audio-url').on('click', function(e) {
             e.preventDefault();
             
@@ -192,6 +224,8 @@ function save_podcast_audio_meta_box($post_id) {
     }
     
     log_message('save_podcast_audio_meta_box: triggered for post_id=' . $post_id, 'INFO');
+
+    $upload_results = ['jp' => null, 'en' => null];
     
     // 日本語音声の処理
     if (isset($_FILES['podcast_audio_file_jp']) && $_FILES['podcast_audio_file_jp']['error'] === UPLOAD_ERR_OK) {
@@ -200,8 +234,10 @@ function save_podcast_audio_meta_box($post_id) {
         if ($result) {
             update_post_meta($post_id, 'podcast_audio_url', $result);
             log_message('save_podcast_audio_meta_box: podcast_audio_url updated for post_id=' . $post_id, 'INFO');
+            $upload_results['jp'] = 'success';
         } else {
             log_message('save_podcast_audio_meta_box: JP audio upload failed for post_id=' . $post_id, 'ERROR');
+            $upload_results['jp'] = 'error';
         }
     }
     
@@ -212,9 +248,17 @@ function save_podcast_audio_meta_box($post_id) {
         if ($result) {
             update_post_meta($post_id, 'podcast_audio_url_en', $result);
             log_message('save_podcast_audio_meta_box: podcast_audio_url_en updated for post_id=' . $post_id, 'INFO');
+            $upload_results['en'] = 'success';
         } else {
             log_message('save_podcast_audio_meta_box: EN audio upload failed for post_id=' . $post_id, 'ERROR');
+            $upload_results['en'] = 'error';
         }
+    }
+
+    // アップロードが発生した場合のみtransientに保存（60秒間有効、次の画面描画で一度だけ読む）
+    if ($upload_results['jp'] !== null || $upload_results['en'] !== null) {
+        $transient_key = 'podcast_audio_upload_' . get_current_user_id() . '_' . $post_id;
+        set_transient($transient_key, $upload_results, 60);
     }
 }
 add_action('save_post', 'save_podcast_audio_meta_box');
