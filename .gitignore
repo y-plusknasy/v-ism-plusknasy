@@ -5,6 +5,7 @@ html/wp-content/*
 !html/wp-content/themes/
 !html/wp-content/plugins/
 !html/wp-content/mu-plugins/
+wp-config.php
 
 # Ignored wp-content data
 html/wp-content/uploads/
